@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.18;
 
 import "@semaphore-protocol/contracts/interfaces/ISemaphore.sol";
 import "@semaphore-protocol/contracts/interfaces/ISemaphoreVerifier.sol";
@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol"; // Access control with role
 contract PonteSBT is Ownable(msg.sender) {
     struct Group {
         uint256 id;
+        address nft;
         string uri;
     }
 
@@ -23,7 +24,7 @@ contract PonteSBT is Ownable(msg.sender) {
 
     constructor(
         address _semaphoreAddress,
-        address _verifierAddress,
+        address _verifierAddress
     ) {
         semaphore = ISemaphore(_semaphoreAddress);
         verifier = ISemaphoreVerifier(_verifierAddress);
@@ -31,32 +32,24 @@ contract PonteSBT is Ownable(msg.sender) {
 
     function createGroup(
         uint256 _groupId,
+        address _nftAddress,
         string calldata _uri
     ) external onlyOwner {
         semaphore.createGroup(_groupId, 20, address(this));
-        groups.push(Group(_groupId, _uri));
+        groups.push(Group(_groupId, _nftAddress, _uri));
         ids[_groupId] = groups.length - 1; // check this
     }
 
     function joinGroup(
+        address _nftAddress,
+        uint256 _tokenId,
         uint256 _identityCommitment,
         uint256 _groupId,
         bytes32 _uid
     ) external {
-        Attestation memory _attestation = eas.getAttestation(_uid);
+        require(IERC721(_nftAddress).ownerOf(_tokenId) == msg.sender, "You are not owner of NFT");
         Group memory _group = getGroup(ids[_groupId]);
-        //check if schema is good one
-        require(_attestation.schema == _group.schema, "Schema is not matching");
-        // check if attester is good
-        require(
-            _attestation.attester == _group.attester,
-            "This attestation is not approved by official attester/s"
-        );
-        // check if msg.sender is recipient
-        require(
-            _attestation.recipient == msg.sender,
-            "You are not owner of this attestation"
-        );
+        require(_nftAddress == _group.nft, "NFT is not matching");
         semaphore.addMember(_groupId, _identityCommitment);
     }
 
