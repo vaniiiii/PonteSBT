@@ -5,3 +5,5 @@
 	path = lib/openzeppelin-contracts
 [submodule "lib/evm"]
 	path = lib/evm
+[submodule "lib/semaphore"]
+	path = lib/semaphore
